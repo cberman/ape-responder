@@ -14,6 +14,11 @@ async def on_message(message):
     if message.author == client.user or message.author.bot:
         return
 
+    # Add a check to see if the message is in the desired channel
+    desired_channel = client.get_channel(1113303109754687608)
+    if message.channel != desired_channel:
+        return
+
     # If the message mentions a specific user
     if message.mentions:
         # Wait for N minutes
