@@ -5,11 +5,12 @@ from langchain.llms import OpenAI
 
 openai = OpenAI(
     model_name="gpt-3.5-turbo",
-    openai_api_key=config.OPENAI_API_KEY
+    openai_api_key=config.OPENAI_API_KEY,
 )
 
-def get_ape_response():
-    raw_ape_response = ai_utils.get_ape_response(openai, '', '')
+def get_ape_response(pingee, ping, chat_history):
+
+    raw_ape_response = ai_utils.get_ape_response(openai, ping, chat_history, '')
     try:
         parsed_ape_response = json.loads(raw_ape_response)
         print(json.dumps(parsed_ape_response, indent=2))
@@ -22,8 +23,17 @@ def get_ape_response():
 intents = discord.Intents.default()  # Create a new Intents object with all flags enabled
 intents.typing = False  # We don't need the typing intent, so we disable it
 intents.presences = False  # We don't need the presences intent, so we disable it
+intents.message_content = True  # needed to view the content of messages
 
 client = discord.Client(intents=intents)
+
+async def get_user_history(channel, user, limit=100):
+    """Retrieve the user's message history in the channel."""
+    history = []
+    async for message in channel.history(limit=limit):
+        if message.author == user:
+            history.append(message.content)
+    return history
 
 @client.event
 async def on_message(message):
@@ -33,7 +43,7 @@ async def on_message(message):
         return
 
     # Add a check to see if the message is in the desired channel
-    desired_channel = client.get_channel(1113303109754687608)   # ape-responder
+    desired_channel = client.get_channel(config.APE_CHANNEL)   # ape-responder
     if message.channel != desired_channel:
         return
 
@@ -46,8 +56,8 @@ async def on_message(message):
 
     # Check the channel for a message from the mentioned user in the meantime
     history = []
-    async for message in message.channel.history(after=message):
-        history.append(message)
+    async for history_message in message.channel.history(after=message):
+        history.append(history_message)
 
     for pingee in message.mentions:
         if pingee.display_name not in config.VERIFIED_USERS:
@@ -55,8 +65,15 @@ async def on_message(message):
             continue
         if not any(m.author == pingee for m in history):
             # The mentioned user did not respond in the meantime, so we reply
+            print(message.content)
             print(f'imersponating: {pingee.name}')
-            ape_response = get_ape_response()
-            await message.channel.send(f'{pingee.display_name}: {ape_response}')
+            main_channel = client.get_channel(config.MAIN_TEXT_CHANNEL)
+            user_history = await get_user_history(main_channel, pingee)
+            history_string = str()
+            for msg in user_history:
+                history_string += msg + '\n'
+            history_string = history_string.strip()
+            ape_response = get_ape_response(pingee, message.content, history_string)
+            await message.reply(f'{pingee.display_name}: {ape_response}')
 
 client.run(config.DISCORD_TOKEN)
