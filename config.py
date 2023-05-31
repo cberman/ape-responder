@@ -1,2 +1,5 @@
 SECONDS_TO_WAIT = 3
-TOKEN = 'your token here'
+TOKEN = open('api.key').read()
+VERIFIED_USERS = (
+        'cyberman',
+        )
