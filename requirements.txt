@@ -1,1 +1,4 @@
 discord.py
+langchain
+jinja2
+openai

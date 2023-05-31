@@ -1,6 +1,23 @@
-import discord
-import asyncio
-import config
+import discord, asyncio
+import config, ai_utils
+import json
+from langchain.llms import OpenAI
+
+openai = OpenAI(
+    model_name="gpt-3.5-turbo",
+    openai_api_key=config.OPENAI_API_KEY
+)
+
+def get_ape_response():
+    raw_ape_response = ai_utils.get_ape_response(openai, '', '')
+    try:
+        parsed_ape_response = json.loads(raw_ape_response)
+        print(json.dumps(parsed_ape_response, indent=2))
+        return parsed_ape_response.get('response', 'no response')
+    except Exception as e:
+        print(str(e))
+        print(raw_ape_response)
+        return 'error'
 
 intents = discord.Intents.default()  # Create a new Intents object with all flags enabled
 intents.typing = False  # We don't need the typing intent, so we disable it
@@ -39,6 +56,7 @@ async def on_message(message):
         if not any(m.author == pingee for m in history):
             # The mentioned user did not respond in the meantime, so we reply
             print(f'imersponating: {pingee.name}')
-            await message.channel.send(f'{pingee.display_name}: Sorry, I was away. How can I assist you?')
+            ape_response = get_ape_response()
+            await message.channel.send(f'{pingee.display_name}: {ape_response}')
 
-client.run(config.TOKEN)
+client.run(config.DISCORD_TOKEN)
