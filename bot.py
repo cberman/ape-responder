@@ -2,7 +2,11 @@ import discord
 import asyncio
 import config
 
-client = discord.Client()
+intents = discord.Intents.default()  # Create a new Intents object with all flags enabled
+intents.typing = False  # We don't need the typing intent, so we disable it
+intents.presences = False  # We don't need the presences intent, so we disable it
+
+client = discord.Client(intents=intents)
 
 @client.event
 async def on_message(message):
@@ -11,14 +15,17 @@ async def on_message(message):
         return
 
     # If the message mentions a specific user
-    if client.user in message.mentions:
+    if message.mentions:
         # Wait for N minutes
         await asyncio.sleep(config.SECONDS_TO_WAIT)
 
         # Check the channel for a message from the mentioned user in the meantime
-        history = await message.channel.history(after=message).flatten()
-        if not any(m.author == client.user for m in history):
-            # The mentioned user did not respond in the meantime, so we reply
-            await message.channel.send("Sorry, I was away. How can I assist you?")
+        history = []
+        async for message in message.channel.history(after=message):
+            history.append(message)
+        for member in message.mentions:
+            if not any(m.author == member for m in history):
+                # The mentioned user did not respond in the meantime, so we reply
+                await message.channel.send(f"{member}: Sorry, I was away. How can I assist you?")
 
 client.run(config.TOKEN)
