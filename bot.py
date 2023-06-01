@@ -68,8 +68,12 @@ async def on_message(message):
             print(message.content)
             print(f'imersponating: {pingee.name}')
             main_channel = client.get_channel(config.MAIN_TEXT_CHANNEL)
+            ape_channel = client.get_channel(config.APE_CHANNEL)
             user_history = await get_user_history(main_channel, pingee)
             history_string = str()
+            for msg in user_history:
+                history_string += msg + '\n'
+            user_history = await get_user_history(ape_channel, pingee)
             for msg in user_history:
                 history_string += msg + '\n'
             history_string = history_string.strip()

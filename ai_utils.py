@@ -48,7 +48,7 @@ chat_inputs = {'ping': 'the ping that the user missed',
                # 'sample_pings': 'a list of previous responses by the user after they are pinged',
     }
 chat_output_field = 'response'
-ape_output_desc = 'the gorilla assistant\'s response. make sure to include a response of some sort, even if the gorilla has nothing to say.'
+ape_output_desc = 'the gorilla assistant\'s response, for what it thinks the user would say to the ping. make sure to include a response of some sort, even if the gorilla has nothing to say.'
 ape_template = build_prompt_template(ape_context, chat_inputs, chat_output_field, ape_output_desc)
 
 def get_ape_response(openai, ping, sample_chats, sample_pings=''):

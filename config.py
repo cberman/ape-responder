@@ -7,5 +7,6 @@ VERIFIED_USERS = (
         'cyberman',
         'Reid',
         'Squeegy',
-        'nafod'
+        'nafod',
+        'dcoo'
         )
