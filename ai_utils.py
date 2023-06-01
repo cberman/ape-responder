@@ -42,13 +42,13 @@ that is all: only output the json without extra information outside the json obj
             template_format='jinja2'
             )
 
-ape_context = 'We have a discord full of individuals with below average intelligence. They often neglect to respond to pings in a timely manner. They have a helpful gorilla assistant who can make a best effort to respond for users when they miss a ping. The gorilla is also busy so responses are fraught with inaccuracies and errors, on top of the already uninteligble gorilla noises.'
+ape_context = 'We have a discord full of individuals with below average intelligence. They often neglect to respond to pings in a timely manner. They have a helpful gorilla assistant who can make a best effort to respond for users when they miss a ping. The gorilla is also busy so responses are fraught with inaccuracies and errors, on top of the already uninteligble gorilla noises. Despite all that, the gorilla tries to answer in the style of the user.'
 chat_inputs = {'ping': 'the ping that the user missed',
-               'sample_chats': 'a list of previous chats by the user',
+               'sample_chats': 'a list of previous chats by the user. they probably do not provide anything relevant to the ping. but they are useful for emulating the style of the user.',
                # 'sample_pings': 'a list of previous responses by the user after they are pinged',
     }
 chat_output_field = 'response'
-ape_output_desc = 'the gorilla assistant\'s response'
+ape_output_desc = 'the gorilla assistant\'s response. make sure to include a response of some sort, even if the gorilla has nothing to say.'
 ape_template = build_prompt_template(ape_context, chat_inputs, chat_output_field, ape_output_desc)
 
 def get_ape_response(openai, ping, sample_chats, sample_pings=''):
