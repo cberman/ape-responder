@@ -2,6 +2,7 @@ import discord, asyncio
 import config, ai_utils
 import json
 from langchain.llms import OpenAI
+import concurrent.futures
 
 openai = OpenAI(
     model_name="gpt-3.5-turbo",
@@ -27,13 +28,25 @@ intents.message_content = True  # needed to view the content of messages
 
 client = discord.Client(intents=intents)
 
-async def get_user_history(channel, user, limit=100):
+chat_history = list()
+@client.event
+async def on_ready():
+    print(f'We have logged in as {client.user}')
+    main_channel = client.get_channel(config.MAIN_TEXT_CHANNEL)
+    ape_channel = client.get_channel(config.APE_CHANNEL)
+    async for message in main_channel.history(limit=config.HISTORY_LIMIT):
+        chat_history.append(message)
+    async for message in ape_channel.history(limit=config.HISTORY_LIMIT):
+        chat_history.append(message)
+    print(f'Loaded {config.HISTORY_LIMIT} chats from general and ape-responder each')
+
+def get_user_history(user):
     """Retrieve the user's message history in the channel."""
-    history = []
-    async for message in channel.history(limit=limit):
+    user_history = []
+    for message in chat_history:
         if message.author == user:
-            history.append(message.content)
-    return history
+            user_history.append(message.content)
+    return user_history
 
 @client.event
 async def on_message(message):
@@ -67,17 +80,17 @@ async def on_message(message):
             # The mentioned user did not respond in the meantime, so we reply
             print(message.content)
             print(f'imersponating: {pingee.name}')
-            main_channel = client.get_channel(config.MAIN_TEXT_CHANNEL)
-            ape_channel = client.get_channel(config.APE_CHANNEL)
-            user_history = await get_user_history(main_channel, pingee)
-            history_string = str()
-            for msg in user_history:
-                history_string += msg + '\n'
-            user_history = await get_user_history(ape_channel, pingee)
-            for msg in user_history:
-                history_string += msg + '\n'
-            history_string = history_string.strip()
-            ape_response = get_ape_response(pingee, message.content, history_string)
+
+            user_history = get_user_history(pingee)
+            history_string = '\n'.join(user_history)
+
+            loop = asyncio.get_event_loop()  # Get the current event loop
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                # Run the get_ape_response function in the executor
+                future = loop.run_in_executor(executor, get_ape_response, pingee, message.content, history_string)
+                ape_response = await future  # This will complete once get_ape_response has completed
+
             await message.reply(f'{pingee.display_name}: {ape_response}')
+
 
 client.run(config.DISCORD_TOKEN)
