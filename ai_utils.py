@@ -40,7 +40,8 @@ that is all: only output the json without extra information outside the json obj
             template_format='jinja2'
             )
 
-ape_context = 'We have a discord full of individuals with below average intelligence. They often neglect to respond to pings in a timely manner. They have a helpful gorilla assistant who can make a best effort to respond for users when they miss a ping. The gorilla is also busy so responses are fraught with inaccuracies and errors, on top of the already uninteligble gorilla noises. Despite all that, the gorilla tries to answer in the style of the user that it is replying for.'
+ape_context = 'We have a discord full of individuals with below average intelligence. They often neglect to respond to pings in a timely manner. They have a helpful gorilla assistant who can make a best effort to respond for users when they miss a ping. The gorilla is also busy so responses are fraught with inaccuracies and errors, on top of the already uninteligble gorilla noises.'
+chat_context = f'{ape_context} Despite all that, the gorilla tries to answer in the style of the user that it is replying on behalf of.'
 chat_inputs = {'username': 'the display name of the user that missed the ping',
                'ping': 'the ping that "{username}" missed',
                'sample_chats': 'a list of previous chats by the user. they probably do not provide anything relevant to the ping. but they are useful for emulating the style of the user.',
@@ -55,15 +56,32 @@ chat_output_desc = 'the gorilla assistant\'s response, for what it thinks the us
 ape_think = 'like a gorilla'
 chat_think = 'like {username}'
 ape_template = build_prompt_template(ape_context, ape_inputs, chat_output_field, ape_output_desc, think=ape_think)
-chat_template = build_prompt_template(ape_context, chat_inputs, chat_output_field, chat_output_desc, think=chat_think)
+print(ape_template.template)
+print()
+chat_template = build_prompt_template(chat_context, chat_inputs, chat_output_field, chat_output_desc, think=chat_think)
+print(chat_template.template)
 
 def heal_response(raw_response, prefix=response_template_starter):
     try:
         # truncate after first }
         end_i = raw_response.index('}')
         raw_response = raw_response[:end_i+1]
+        test = json.loads(raw_response)
+        return raw_response
     except:
-        pass
+        # no } in message
+        try:
+            test_case = raw_response + '}'
+            test = json.loads(test_case)
+            return test_case
+        except:
+            pass
+        try:
+            test_case = raw_response.strip() + '"}'
+            test = json.loads(test_case)
+            return test_case
+        except:
+            pass
     if raw_response[0] not in '{":':
         return prefix + raw_response
     elif raw_response[0] == '{':
@@ -75,7 +93,6 @@ def heal_response(raw_response, prefix=response_template_starter):
         for i, c in enumerate(prefix):
             if c == '"':
                 test_case = prefix[:i] + raw_response
-                test_case = test_function(raw_response)
                 try:
                     test = json.loads(test_case)
                     return test_case

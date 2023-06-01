@@ -11,5 +11,6 @@ VERIFIED_USERS = (
         'Reid',
         'Squeegy',
         'nafod',
-        'dcoo'
+        'dcoo',
+        'frijolito'
         )

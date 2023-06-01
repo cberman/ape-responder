@@ -83,8 +83,8 @@ async def on_message(message):
             print('responding as Gorilla')
             history_string = str()
             if message.author.name in config.VERIFIED_USERS:
-                user_history = user_history[message.author]
-                history_string = '\n'.join(user_history)
+                author_history = user_history[message.author]
+                history_string = '\n'.join(author_history)
             loop = asyncio.get_event_loop()  # Get the current event loop
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 # Run the get_ape_response function in the executor
@@ -101,8 +101,8 @@ async def on_message(message):
             # The mentioned user did not respond in the meantime, so we reply
             print(message.content)
             print(f'imersponating: {pingee.name}')
-            user_history = user_history[pingee]
-            history_string = '\n'.join(user_history)
+            pingee_history = user_history[pingee]
+            history_string = '\n'.join(pingee_history)
             loop = asyncio.get_event_loop()  # Get the current event loop
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 # Run the get_chat_response function in the executor
