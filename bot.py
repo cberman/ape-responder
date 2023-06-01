@@ -75,8 +75,11 @@ async def on_message(message):
         if pingee == client.user:
             print(message.content)
             print('responding as Gorilla')
-            user_history = get_user_history(message.author)
-            history_string = '\n'.join(user_history)
+            if message.author in config.VERIFIED_USERS:
+                user_history = get_user_history(message.author)
+                history_string = '\n'.join(user_history)
+            else:
+                history_string = '\n'
             loop = asyncio.get_event_loop()  # Get the current event loop
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 # Run the get_ape_response function in the executor
