@@ -5,7 +5,7 @@ from langchain.llms import OpenAI
 import concurrent.futures
 
 openai = OpenAI(
-    model_name="gpt-3.5-turbo",
+    model_name=config.OPENAI_MODEL_NAME,
     openai_api_key=config.OPENAI_API_KEY,
 )
 
