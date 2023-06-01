@@ -1,10 +1,10 @@
 from langchain import PromptTemplate
 import json
 
-response_template_starter = """{
-    "reasoning": "Let's think like a gorilla. """
+response_template_starter = '''{
+    "reasoning": "Let\'s think'''
 
-def build_prompt_template(context, inputs, output_field, output_desc, ex_reason='...', ex_output='...'):
+def build_prompt_template(context, inputs, output_field, output_desc, think='step by step', ex_reason='...', ex_output='...'):
     template_skeleton = f"""{context}
 
 Use the following format:
@@ -18,8 +18,7 @@ Use the following format:
     template_skeleton += f"""Answer:
 ```
 json output with two fields: "reasoning" and "{output_field}". for example:
-{{
-    "reasoning": "Let's think like a gorilla. {ex_reason}",
+{response_template_starter} {think}. {ex_reason}",
     "{output_field}": "{ex_output}"
 }}
 here, the value for "{output_field}" should be {output_desc}"
@@ -32,10 +31,9 @@ that is all: only output the json without extra information outside the json obj
 {{{{{input_name}}}}}
 ```
 """
-    template_skeleton += """Answer:
+    template_skeleton += f"""Answer:
 ```
-""" 
-    template_skeleton += response_template_starter
+{response_template_starter} {think}. """
     return PromptTemplate(
             input_variables=list(inputs.keys()),
             template=template_skeleton,
@@ -48,18 +46,55 @@ chat_inputs = {'ping': 'the ping that the user missed',
                # 'sample_pings': 'a list of previous responses by the user after they are pinged',
     }
 chat_output_field = 'response'
-ape_output_desc = 'the gorilla assistant\'s response, for what it thinks the user would say to the ping. make sure to include a response of some sort, even if the gorilla has nothing to say.'
-ape_template = build_prompt_template(ape_context, chat_inputs, chat_output_field, ape_output_desc)
+ape_output_desc = 'the gorilla assistant\'s response to the user\'s ping. make sure to include a response of some sort, even if the gorilla has nothing to say. please answer as though you were a gorilla who was semi-capable of speaking english and was also famished for bananas at the time of responding.'
+chat_output_desc = 'the gorilla assistant\'s response, for what it thinks the user would say to the ping. make sure to include a response of some sort, even if the gorilla has nothing to say. remember, you are trying to answer in the style of the user.'
+ape_think = 'like a gorilla'
+chat_think = 'like the user'
+ape_template = build_prompt_template(ape_context, chat_inputs, chat_output_field, ape_output_desc, think=ape_think)
+chat_template = build_prompt_template(ape_context, chat_inputs, chat_output_field, chat_output_desc, think=chat_think)
+
+def heal_response(raw_response, prefix=response_template_starter):
+    try:
+        # truncate after first }
+        end_i = raw_response.index('}')
+        raw_response = raw_response[:end_i+1]
+    except:
+        pass
+    if raw_response[0] not in '{":':
+        return prefix + raw_response
+    elif raw_response[0] == '{':
+        return raw_response
+    elif raw_response[0] == ':':
+        return prefix[
+                :prefix.index(':')] + raw_response
+    elif raw_response[0] == '"':
+        for i, c in enumerate(prefix):
+            if c == '"':
+                test_case = prefix[:i] + raw_response
+                test_case = test_function(raw_response)
+                try:
+                    test = json.loads(test_case)
+                    return test_case
+                except json.decoder.JSONDecodeError:
+                    pass
+    return raw_response
 
 def get_ape_response(openai, ping, sample_chats, sample_pings=''):
-    json_str_response = response_template_starter + openai(
+    raw_response = openai(
             ape_template.format(
                     ping=ping,
                     sample_chats=sample_chats
                     #sample_pings=sample_pings
                 ))
-    try:
-        end_i = json_str_response.index('}')
-        return json_str_response[:end_i+1]
-    except:
-        return json_str_response
+    prefix = f'{response_template_starter} {ape_think}. '
+    return heal_response(raw_response, prefix)
+
+def get_chat_response(openai, ping, sample_chats, sample_pings=''):
+    raw_response = openai(
+            chat_template.format(
+                    ping=ping,
+                    sample_chats=sample_chats
+                    #sample_pings=sample_pings
+                ))
+    prefix = f'{response_template_starter} {chat_think}. '
+    return heal_response(raw_response, prefix)
