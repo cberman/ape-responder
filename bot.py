@@ -29,11 +29,20 @@ intents.message_content = True  # needed to view the content of messages
 client = discord.Client(intents=intents)
 
 user_history = defaultdict(list)
+ape_history = defaultdict(list)
 def load_message(message):
-    global user_history
+    global user_history, client
+    if len(message.content) > 1000:
+        return False
     if message.author.name in config.VERIFIED_USERS:
         user_history[message.author].append(message.content)
         return True
+    elif message.author == client.user:
+        if ':' in message.content[:32]:
+            obo = message.content.split(':')[0]
+            ape_history[obo].append(message.content)
+        else:
+            ape_history[client.user.name].append(message.content)
     return False
 
 @client.event
@@ -81,10 +90,13 @@ async def on_message(message):
             # ape was pinged directly
             print(message.content)
             print('responding as Gorilla')
-            history_string = str()
+            history_string = 'Gorilla\'s chat history:\n'
+            # ape_self_history = ape_history[client.user.name]
+            history_string += json.dumps(ape_history, indent=2)
             if message.author.name in config.VERIFIED_USERS:
+                history_string += '\nUser\'s chat history:\n'
                 author_history = user_history[message.author]
-                history_string = '\n'.join(author_history)
+                history_string += '\n'.join(author_history)
             loop = asyncio.get_event_loop()  # Get the current event loop
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 # Run the get_ape_response function in the executor
