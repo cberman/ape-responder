@@ -101,5 +101,5 @@ def get_chat_response(openai, username, ping, sample_chats, sample_pings=''):
                     sample_chats=sample_chats
                     #sample_pings=sample_pings
                 ))
-    prefix = f'{response_template_starter} the user. '
+    prefix = f'{response_template_starter} like {username}. '
     return heal_response(raw_response, prefix)

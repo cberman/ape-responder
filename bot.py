@@ -3,6 +3,7 @@ import config, ai_utils
 import json
 from langchain.llms import OpenAI
 import concurrent.futures
+from collections import defaultdict
 
 openai = OpenAI(
     model_name=config.OPENAI_MODEL_NAME,
@@ -27,28 +28,31 @@ intents.message_content = True  # needed to view the content of messages
 
 client = discord.Client(intents=intents)
 
-chat_history = list()
+user_history = defaultdict(list)
+def load_message(message):
+    global user_history
+    if message.author.name in config.VERIFIED_USERS:
+        user_history[message.author].append(message.content)
+        return True
+    return False
+
 @client.event
 async def on_ready():
     print(f'We have logged in as {client.user}')
-    main_channel = client.get_channel(config.MAIN_TEXT_CHANNEL)
-    ape_channel = client.get_channel(config.APE_CHANNEL)
-    async for message in main_channel.history(limit=config.HISTORY_LIMIT):
-        chat_history.append(message)
-    async for message in ape_channel.history(limit=config.HISTORY_LIMIT):
-        chat_history.append(message)
-    print(f'Loaded {config.HISTORY_LIMIT} chats from general and ape-responder each')
-
-def get_user_history(user):
-    """Retrieve the user's message history in the channel."""
-    user_history = []
-    for message in chat_history:
-        if message.author == user:
-            user_history.append(message.content)
-    return user_history
+    for channel_name, channel_num in {
+            'main': config.MAIN_TEXT_CHANNEL,
+            'ape': config.APE_CHANNEL
+            }.items():
+        loaded = 0
+        channel = client.get_channel(channel_num)
+        async for message in channel.history(limit=config.HISTORY_LIMIT):
+            if load_message(message):
+                loaded += 1
+        print(f'Loaded {loaded} chats from the {channel_name} channel')
 
 @client.event
 async def on_message(message):
+    global user_history
     await message.guild.me.edit(nick='ape responder')
     # We don't want the bot to respond to itself or another bot
     if message.author == client.user or message.author.bot:
@@ -67,20 +71,20 @@ async def on_message(message):
     await asyncio.sleep(config.SECONDS_TO_WAIT)
 
     # Check the channel for a message from the mentioned user in the meantime
-    history = []
+    latest_history = []
     async for history_message in message.channel.history(after=message):
-        history.append(history_message)
+        latest_history.append(history_message)
+        load_message(history_message)
 
     for pingee in message.mentions:
         if pingee == client.user:
             # ape was pinged directly
             print(message.content)
             print('responding as Gorilla')
-            ape_history = get_user_history(client.user)
-            history_string = '\n'.join(ape_history)
-            if message.author.display_name in config.VERIFIED_USERS:
-                user_history = get_user_history(message.author)
-                history_string += '\n' + '\n'.join(user_history)
+            history_string = str()
+            if message.author.name in config.VERIFIED_USERS:
+                user_history = user_history[message.author]
+                history_string = '\n'.join(user_history)
             loop = asyncio.get_event_loop()  # Get the current event loop
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 # Run the get_ape_response function in the executor
@@ -89,22 +93,22 @@ async def on_message(message):
                 ape_response = await future  # This will complete once get_ape_response has completed
             await message.reply(ape_response)
 
-        elif pingee.display_name not in config.VERIFIED_USERS:
+        elif pingee.name not in config.VERIFIED_USERS:
             # make sure the user agrees to be impersonated
             continue
 
-        elif not any(m.author == pingee for m in history):
+        elif not any(m.author == pingee for m in latest_history):
             # The mentioned user did not respond in the meantime, so we reply
             print(message.content)
             print(f'imersponating: {pingee.name}')
-            user_history = get_user_history(pingee)
+            user_history = user_history[pingee]
             history_string = '\n'.join(user_history)
             loop = asyncio.get_event_loop()  # Get the current event loop
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 # Run the get_chat_response function in the executor
                 future = loop.run_in_executor(executor, get_ai_response, ai_utils.get_chat_response, {'username':pingee, 'ping':message.content, 'sample_chats':history_string})
                 chat_response = await future  # This will complete once get_ape_response has completed
-            await message.reply(f'{pingee.display_name}: {chat_response}')
+            await message.reply(f'{pingee.name}: {chat_response}')
 
 
 client.run(config.DISCORD_TOKEN)
