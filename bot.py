@@ -31,7 +31,7 @@ client = discord.Client(intents=intents)
 user_history = defaultdict(list)
 ape_history = defaultdict(list)
 def load_message(message):
-    global user_history, client
+    global user_history, ape_history, client
     if len(message.content) > 1000:
         return False
     if message.author.name in config.VERIFIED_USERS:
@@ -44,6 +44,11 @@ def load_message(message):
         else:
             ape_history[client.user.name].append(message.content)
     return False
+
+def reset_history():
+    global user_history, ape_history
+    user_history = defaultdict(list)
+    ape_history = defaultdict(list)
 
 @client.event
 async def on_ready():
@@ -58,11 +63,13 @@ async def on_ready():
             if load_message(message):
                 loaded += 1
         print(f'Loaded {loaded} chats from the {channel_name} channel')
+    for user in user_history:
+        print(f'{user}\n {user_history[user]}')
 
 @client.event
 async def on_message(message):
     global user_history
-    await message.guild.me.edit(nick='ape responder')
+    # await message.guild.me.edit(nick='ape responder')
     # We don't want the bot to respond to itself or another bot
     if message.author == client.user or message.author.bot:
         return
@@ -102,7 +109,13 @@ async def on_message(message):
                 # Run the get_ape_response function in the executor
                 future = loop.run_in_executor(executor, get_ai_response, ai_utils.get_ape_response, {'ping':message.content, 'sample_chats':history_string})
 
-                ape_response = await future  # This will complete once get_ape_response has completed
+                try:
+                    ape_response = await future  # This will complete once get_ape_response has completed
+                except openai.error.InvalidRequestError:
+                    ape_response = 'uh oh, ape forget. try ask again.'
+                    reset_history()
+                    await on_read()
+
             await message.reply(ape_response)
 
         elif pingee.name not in config.VERIFIED_USERS:

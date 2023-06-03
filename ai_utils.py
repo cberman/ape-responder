@@ -56,10 +56,10 @@ chat_output_desc = 'the gorilla assistant\'s response, for what it thinks the us
 ape_think = 'like a gorilla'
 chat_think = 'like {username}'
 ape_template = build_prompt_template(ape_context, ape_inputs, chat_output_field, ape_output_desc, think=ape_think)
-print(ape_template.template)
-print()
+# print(ape_template.template)
+# print()
 chat_template = build_prompt_template(chat_context, chat_inputs, chat_output_field, chat_output_desc, think=chat_think)
-print(chat_template.template)
+# print(chat_template.template)
 
 def heal_response(raw_response, prefix=response_template_starter):
     try:
@@ -101,22 +101,24 @@ def heal_response(raw_response, prefix=response_template_starter):
     return raw_response
 
 def get_ape_response(openai, ping, sample_chats):
-    raw_response = openai(
-            ape_template.format(
+    template = ape_template.format(
                     ping=ping,
                     sample_chats=sample_chats
                     #sample_pings=sample_pings
-                ))
+                )
+    print(template)
+    raw_response = openai(template)
     prefix = f'{response_template_starter} {ape_think}. '
     return heal_response(raw_response, prefix)
 
 def get_chat_response(openai, username, ping, sample_chats, sample_pings=''):
-    raw_response = openai(
-            chat_template.format(
+    template = chat_template.format(
                     username=username,
                     ping=ping,
                     sample_chats=sample_chats
                     #sample_pings=sample_pings
-                ))
+                )
+    print(template)
+    raw_response = openai(template)
     prefix = f'{response_template_starter} like {username}. '
     return heal_response(raw_response, prefix)
