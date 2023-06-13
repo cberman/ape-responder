@@ -21,7 +21,7 @@ json output with two fields: "reasoning" and "{output_field}". for example:
 {response_template_starter} {think}. {ex_reason}",
     "{output_field}": "{ex_output}"
 }}
-here, the value for "{output_field}" should be {output_desc}"
+here, the value for "{output_field}" should be {output_desc}
 that is all: only output the json without extra information outside the json object. make sure the json is valid, e.g., if using double quotes within a string they should be escaped.
 
 """
@@ -42,24 +42,33 @@ that is all: only output the json without extra information outside the json obj
 
 ape_context = 'We have a discord full of individuals with below average intelligence. They often neglect to respond to pings in a timely manner. They have a helpful gorilla assistant who can make a best effort to respond for users when they miss a ping. The gorilla is also busy so responses are fraught with inaccuracies and errors, on top of the already uninteligble gorilla noises.'
 chat_context = f'{ape_context} Despite all that, the gorilla tries to answer in the style of the user that it is replying on behalf of.'
+celeb_context = f'{chat_context}\nNow, the bot can also respond for anyone at all, even if they aren\'t in the discord. For example, if a user tags @drake in their message then they expect a response from drake. However, the response in still written by the ape, so it shouldn\'t be a verbatim quote from the celebrity, the bot should heavily replace some of the words with gorilla concepts like bananas, etc.'
+ape_inputs = {'ping': 'a dm from a user to the gorilla',
+              'sample_chats': 'a list of previous chats by the user and the gorilla. they may be relevant to the ping, but most are not.',
+    }
 chat_inputs = {'username': 'the display name of the user that missed the ping',
-               'ping': 'the ping that "{username}" missed',
+               'ping': 'the ping that the user missed',
                'sample_chats': 'a list of previous chats by the user. they probably do not provide anything relevant to the ping. but they are useful for emulating the style of the user.',
                # 'sample_pings': 'a list of previous responses by the user after they are pinged',
     }
-ape_inputs = {'ping': 'a dm from a user to the gorilla',
-              'sample_chats': 'a list of previous chats by the user and the gorilla. they be relevant to the ping, but most are not.',
+celeb_inputs = {'celebrity': 'the discord name of the celebrity that missed the ping',
+               'ping': 'the ping that the celebrity missed',
     }
 chat_output_field = 'response'
 ape_output_desc = 'the gorilla assistant\'s response to the user\'s ping. make sure to include a response of some sort, even if the gorilla has nothing to say. please answer as though you were a gorilla who was semi-capable of speaking english and was also famished for bananas at the time of responding.'
 chat_output_desc = 'the gorilla assistant\'s response, for what it thinks the user would say to the ping. make sure to include a response of some sort, even if the gorilla has nothing to say. remember, you are trying to answer in the style of the user.'
 ape_think = 'like a gorilla'
-chat_think = 'like {username}'
+chat_think = 'like the user that missed the ping'
+celeb_think = 'like the celebrity that missed the ping'
 ape_template = build_prompt_template(ape_context, ape_inputs, chat_output_field, ape_output_desc, think=ape_think)
 # print(ape_template.template)
 # print()
 chat_template = build_prompt_template(chat_context, chat_inputs, chat_output_field, chat_output_desc, think=chat_think)
 # print(chat_template.template)
+# print()
+celeb_template = build_prompt_template(celeb_context, celeb_inputs, chat_output_field, chat_output_desc, think=celeb_think)
+print(celeb_template.template)
+print()
 
 def heal_response(raw_response, prefix=response_template_starter):
     try:
@@ -120,5 +129,15 @@ def get_chat_response(openai, username, ping, sample_chats, sample_pings=''):
                 )
     print(template)
     raw_response = openai(template)
-    prefix = f'{response_template_starter} like {username}. '
+    prefix = f'{response_template_starter} {chat_think}. '
+    return heal_response(raw_response, prefix)
+
+def get_celeb_response(openai, celebrity, ping):
+    template = celeb_template.format(
+                    celebrity=celebrity,
+                    ping=ping
+                )
+    print(template)
+    raw_response = openai(template)
+    prefix = f'{response_template_starter} {celeb_think}. '
     return heal_response(raw_response, prefix)

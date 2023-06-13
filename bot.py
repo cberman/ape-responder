@@ -1,6 +1,6 @@
 import discord, asyncio
 import config, ai_utils
-import json
+import json, re
 from langchain.llms import OpenAI
 import concurrent.futures
 from collections import defaultdict
@@ -15,6 +15,8 @@ def get_ai_response(f, kwargs):
     try:
         parsed_ai_response = json.loads(raw_ai_response)
         print(json.dumps(parsed_ai_response, indent=2))
+        for i in range(3):
+            print()
         return parsed_ai_response.get('response', 'no response')
     except Exception as e:
         print(str(e))
@@ -53,6 +55,7 @@ def reset_history():
 @client.event
 async def on_ready():
     print(f'We have logged in as {client.user}')
+    reset_history()
     for channel_name, channel_num in {
             'main': config.MAIN_TEXT_CHANNEL,
             'ape': config.APE_CHANNEL
@@ -66,9 +69,10 @@ async def on_ready():
     for user in user_history:
         print(f'{user}\n {user_history[user]}')
 
+_ping_re = re.compile(r'@[a-zA-Z][-_0-9a-zA-Z]*')
 @client.event
 async def on_message(message):
-    global user_history
+    global user_history, _ping_re
     # await message.guild.me.edit(nick='ape responder')
     # We don't want the bot to respond to itself or another bot
     if message.author == client.user or message.author.bot:
@@ -78,6 +82,19 @@ async def on_message(message):
     desired_channel = client.get_channel(config.APE_CHANNEL)   # ape-responder
     if message.channel != desired_channel:
         return
+
+    celebs = _ping_re.findall(message.content)
+    if celebs:
+        # someone besides a discord user was pinged
+        print(message.content)
+        for celeb in celebs:
+            print(f'imersponating: {celeb}')
+            loop = asyncio.get_event_loop()
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                # get the llm response in a thread
+                future = loop.run_in_executor(executor, get_ai_response, ai_utils.get_celeb_response, {'celebrity':celeb, 'ping':message.content})
+                chat_response = await future
+            await message.reply(f'{celeb}: {chat_response}')
 
     # If the message mentions a specific user
     if not message.mentions:
@@ -104,16 +121,15 @@ async def on_message(message):
                 history_string += '\nUser\'s chat history:\n'
                 author_history = user_history[message.author]
                 history_string += '\n'.join(author_history)
-            loop = asyncio.get_event_loop()  # Get the current event loop
+            loop = asyncio.get_event_loop()
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                # Run the get_ape_response function in the executor
+                # get the llm response in a thread
                 future = loop.run_in_executor(executor, get_ai_response, ai_utils.get_ape_response, {'ping':message.content, 'sample_chats':history_string})
 
                 try:
-                    ape_response = await future  # This will complete once get_ape_response has completed
+                    ape_response = await future
                 except openai.error.InvalidRequestError:
                     ape_response = 'uh oh, ape forget. try ask again.'
-                    reset_history()
                     await on_read()
 
             await message.reply(ape_response)
@@ -128,11 +144,11 @@ async def on_message(message):
             print(f'imersponating: {pingee.name}')
             pingee_history = user_history[pingee]
             history_string = '\n'.join(pingee_history)
-            loop = asyncio.get_event_loop()  # Get the current event loop
+            loop = asyncio.get_event_loop()
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                # Run the get_chat_response function in the executor
+                # get the llm response in a thread
                 future = loop.run_in_executor(executor, get_ai_response, ai_utils.get_chat_response, {'username':pingee, 'ping':message.content, 'sample_chats':history_string})
-                chat_response = await future  # This will complete once get_ape_response has completed
+                chat_response = await future
             await message.reply(f'{pingee.name}: {chat_response}')
 
 
