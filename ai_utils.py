@@ -22,7 +22,7 @@ json output with two fields: "reasoning" and "{output_field}". for example:
     "{output_field}": "{ex_output}"
 }}
 here, the value for "{output_field}" should be {output_desc}
-that is all: only output the json without extra information outside the json object. make sure the json is valid, e.g., if using double quotes within a string they should be escaped.
+that is all: only output the json without extra information outside the json object. make sure the json is valid, e.g., if using double quotes within a string they should be escaped. however, single quotes do not need to be escaped.
 
 """
     for input_name in inputs.keys():

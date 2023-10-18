@@ -135,6 +135,7 @@ async def on_message(message):
             await message.reply(ape_response)
 
         elif pingee.name not in config.VERIFIED_USERS:
+            print(f'***skipping user "{pingee.name}" due to missing verification***')
             # make sure the user agrees to be impersonated
             continue
 
